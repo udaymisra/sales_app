@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SwarnSaleApp</string>
+    <string name="title_activity_main">SwarnSaleApp</string>
+    <string name="package_name">com.swarnsale.app</string>
+    <string name="custom_url_scheme">com.swarnsale.app</string>
+</resources>

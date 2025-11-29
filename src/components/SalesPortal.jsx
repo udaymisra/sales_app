@@ -1,0 +1,309 @@
+import React, { useState, useEffect } from 'react';
+import { MapPin, Plus, Trash2, Save, X, ShoppingBag } from 'lucide-react';
+import { db } from '../firebase';
+import { ITEMS } from '../constants';
+
+const SalesPortal = ({ userName, userRole, editingOrder, setEditingOrder, onNavigate }) => {
+    const [customerName, setCustomerName] = useState(editingOrder ? editingOrder.customerName : '');
+    const [mobile, setMobile] = useState(editingOrder ? editingOrder.mobile : '');
+    const [location, setLocation] = useState(editingOrder ? editingOrder.location : '');
+    const [selectedItem, setSelectedItem] = useState('');
+    const [selectedItemPrice, setSelectedItemPrice] = useState('');
+    const [qty, setQty] = useState('');
+    const [rate, setRate] = useState('');
+    const [discount, setDiscount] = useState('');
+    const [orderItems, setOrderItems] = useState(editingOrder ? editingOrder.items : []);
+    const [gps, setGps] = useState(editingOrder ? editingOrder.gps : null);
+
+    useEffect(() => {
+        if (editingOrder) {
+            setCustomerName(editingOrder.customerName || '');
+            setMobile(editingOrder.mobile || '');
+            setLocation(editingOrder.location || '');
+            setOrderItems(editingOrder.items || []);
+            setGps(editingOrder.gps || null);
+        }
+    }, [editingOrder]);
+
+    const handleItemSelect = (e) => {
+        const itemName = e.target.value;
+        setSelectedItem(itemName);
+        const item = ITEMS.find(i => i.name === itemName);
+        if (item) {
+            setSelectedItemPrice(item.price);
+            setRate(item.price.toString());
+        } else {
+            setSelectedItemPrice('');
+            setRate('');
+        }
+    };
+
+    const captureGPS = () => {
+        if (!navigator.geolocation) {
+            alert('GPS not supported on this device');
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            pos => {
+                setGps({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+                alert('GPS Captured Successfully!');
+            },
+            err => {
+                console.error('GPS Error:', err);
+                alert(`GPS failed: ${err.message}`);
+            },
+            { timeout: 10000, enableHighAccuracy: true }
+        );
+    };
+
+    const addItem = () => {
+        if (!selectedItem || !qty) return alert('Select item & quantity');
+        const qtyNum = parseFloat(qty) || 0;
+        const rateNum = parseFloat(rate) || 0;
+        const discountPercent = parseFloat(discount) || 0;
+        const itemSubtotal = qtyNum * rateNum;
+        const discountAmount = itemSubtotal * (discountPercent / 100);
+        const itemTotal = itemSubtotal - discountAmount;
+        setOrderItems([...orderItems, {
+            name: selectedItem,
+            qty,
+            rate: rate || '0',
+            discount: discountPercent,
+            total: itemTotal
+        }]);
+        setSelectedItem('');
+        setQty('');
+        setRate('');
+        setSelectedItemPrice('');
+        setDiscount('');
+    };
+
+    const removeItem = (index) => {
+        const newItems = [...orderItems];
+        newItems.splice(index, 1);
+        setOrderItems(newItems);
+    };
+
+    const finalTotal = orderItems.reduce((s, i) => s + i.total, 0);
+
+    const saveOrder = async () => {
+        if (!customerName || !mobile || orderItems.length === 0) return alert('Fill all details');
+        try {
+            const orderData = {
+                customerName,
+                mobile,
+                location: location || 'Manual',
+                items: orderItems,
+                total: finalTotal,
+                salesman: userName,
+                gps,
+                status: editingOrder ? editingOrder.status : 'pending',
+                timestamp: editingOrder ? editingOrder.timestamp : new Date().toISOString()
+            };
+            if (editingOrder) {
+                await db.ref('orders/' + editingOrder.id).update(orderData);
+                alert('Order Updated Successfully!');
+                setEditingOrder(null);
+                onNavigate('/orders');
+            } else {
+                await db.ref('orders').push(orderData);
+                alert('Order Saved Successfully!');
+                setCustomerName('');
+                setMobile('');
+                setLocation('');
+                setOrderItems([]);
+                setGps(null);
+                setDiscount('');
+            }
+        } catch (error) {
+            console.error('Firebase Error:', error);
+            alert(`Failed to save order: ${error.message}`);
+        }
+    };
+
+    const cancelEdit = () => {
+        setEditingOrder(null);
+        onNavigate('/orders');
+    };
+
+    const qtyNum = parseFloat(qty) || 0;
+    const rateNum = parseFloat(rate) || 0;
+    const discountPercent = parseFloat(discount) || 0;
+    const itemSubtotal = qtyNum * rateNum;
+    const discountAmount = itemSubtotal * (discountPercent / 100);
+    const currentItemTotal = itemSubtotal - discountAmount;
+
+    return (
+        <div className="max-w-3xl mx-auto">
+            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mb-4">
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <ShoppingBag className="w-6 h-6 text-blue-600" />
+                        {editingOrder ? 'Edit Order' : 'New Order'}
+                    </h2>
+                    {editingOrder && (
+                        <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                            Editing Mode
+                        </span>
+                    )}
+                </div>
+
+                <form onSubmit={e => { e.preventDefault(); saveOrder(); }} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-xs font-medium text-gray-500 uppercase">Customer Name</label>
+                            <input
+                                placeholder="Enter name"
+                                value={customerName}
+                                onChange={e => setCustomerName(e.target.value)}
+                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-medium text-gray-500 uppercase">Mobile Number</label>
+                            <input
+                                placeholder="Enter mobile"
+                                value={mobile}
+                                onChange={e => setMobile(e.target.value)}
+                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                                inputMode="numeric"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-1">
+                        <label className="text-xs font-medium text-gray-500 uppercase">Location</label>
+                        <div className="flex gap-2">
+                            <input
+                                placeholder="Enter location manually"
+                                value={location}
+                                onChange={e => setLocation(e.target.value)}
+                                className="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                            />
+                            <button
+                                type="button"
+                                onClick={captureGPS}
+                                className={`px-4 py-3 rounded-xl font-bold text-white transition-all flex items-center gap-2 ${gps ? 'bg-green-600' : 'bg-blue-600 hover:bg-blue-700'}`}
+                            >
+                                <MapPin className="w-5 h-5" />
+                                <span className="hidden sm:inline">{gps ? 'GPS Captured' : 'Capture GPS'}</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="border-t border-gray-100 pt-6 mt-6">
+                        <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            <Plus className="w-5 h-5 text-blue-600" />
+                            Add Items
+                        </h3>
+
+                        <div className="space-y-4 bg-gray-50 p-4 rounded-2xl">
+                            <select
+                                value={selectedItem}
+                                onChange={handleItemSelect}
+                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all bg-white"
+                            >
+                                <option value="">Select Item</option>
+                                {ITEMS.map(item => (
+                                    <option key={item.name} value={item.name}>{item.name} - ₹{item.price}</option>
+                                ))}
+                            </select>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <input
+                                    placeholder="Qty"
+                                    type="number"
+                                    value={qty}
+                                    onChange={e => setQty(e.target.value)}
+                                    className="px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all bg-white"
+                                />
+                                <input
+                                    placeholder="Price"
+                                    type="number"
+                                    value={rate}
+                                    onChange={e => setRate(e.target.value)}
+                                    className="px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all bg-white"
+                                />
+                            </div>
+
+                            <input
+                                placeholder="Discount %"
+                                type="number"
+                                value={discount}
+                                onChange={e => setDiscount(e.target.value)}
+                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all bg-white"
+                            />
+
+                            {selectedItem && qty && (
+                                <div className="p-3 bg-blue-100 rounded-xl flex justify-between items-center text-blue-800 text-sm font-medium">
+                                    <span>Item Total:</span>
+                                    <span className="text-lg font-bold">₹{currentItemTotal.toFixed(2)}</span>
+                                </div>
+                            )}
+
+                            <button
+                                type="button"
+                                onClick={addItem}
+                                className="w-full bg-gray-900 text-white py-3 rounded-xl font-bold hover:bg-black transition-all flex items-center justify-center gap-2"
+                            >
+                                <Plus className="w-5 h-5" />
+                                Add to Order
+                            </button>
+                        </div>
+                    </div>
+
+                    {orderItems.length > 0 && (
+                        <div className="space-y-3 mt-6">
+                            <h3 className="font-bold text-gray-800 text-sm uppercase tracking-wider">Order Summary</h3>
+                            {orderItems.map((it, i) => (
+                                <div key={i} className="bg-white border border-gray-100 rounded-xl p-4 flex justify-between items-center shadow-sm">
+                                    <div>
+                                        <p className="font-bold text-gray-800">{it.name}</p>
+                                        <p className="text-sm text-gray-500">{it.qty} × ₹{it.rate} {it.discount > 0 && <span className="text-orange-600">(-{it.discount}%)</span>}</p>
+                                    </div>
+                                    <div className="flex items-center space-x-4">
+                                        <p className="font-bold text-green-600 text-lg">₹{it.total.toFixed(2)}</p>
+                                        <button
+                                            type="button"
+                                            onClick={() => removeItem(i)}
+                                            className="text-gray-400 hover:text-red-500 transition-colors p-2 hover:bg-red-50 rounded-lg"
+                                        >
+                                            <Trash2 className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+
+                            <div className="bg-gray-900 text-white p-6 rounded-2xl mt-4 flex justify-between items-center">
+                                <span className="text-gray-400 font-medium">Final Total</span>
+                                <span className="text-3xl font-bold">₹{finalTotal.toFixed(2)}</span>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex gap-4 pt-4">
+                        <button
+                            type="submit"
+                            className="flex-1 bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-green-200 transition-all flex items-center justify-center gap-2"
+                        >
+                            <Save className="w-5 h-5" />
+                            {editingOrder ? 'Update Order' : 'Save Order'}
+                        </button>
+                        {editingOrder && (
+                            <button
+                                type="button"
+                                onClick={cancelEdit}
+                                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-4 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-2"
+                            >
+                                <X className="w-5 h-5" />
+                                Cancel
+                            </button>
+                        )}
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+export default SalesPortal;
