@@ -5,7 +5,7 @@ import { Plus, Trash2, Wallet, Calendar, User } from 'lucide-react';
 const Collections = ({ userName, userRole }) => {
     const [collections, setCollections] = useState([]);
     const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
-    const [dateFilter, setDateFilter] = useState('asOnDate');
+    const [dateFilter, setDateFilter] = useState('all');
     const [customerName, setCustomerName] = useState('');
     const [collectionAmount, setCollectionAmount] = useState('');
     const [totalCollectionAmount, setTotalCollectionAmount] = useState(0);
@@ -32,7 +32,7 @@ const Collections = ({ userName, userRole }) => {
                         monthAgo.setDate(monthAgo.getDate() - 30);
                         return collectionDate >= monthAgo && collectionDate <= filterDateObj;
                     }
-                    return true;
+                    return true; // 'all' case
                 });
 
                 if (userRole !== 'admin') {
@@ -92,6 +92,7 @@ const Collections = ({ userName, userRole }) => {
                         Collections
                     </h2>
                     <div className="flex flex-wrap gap-2">
+                        <button onClick={() => setDateFilter('all')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${dateFilter === 'all' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>All Time</button>
                         <button onClick={() => setDateFilter('asOnDate')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${dateFilter === 'asOnDate' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>As On Date</button>
                         <button onClick={() => setDateFilter('weekly')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${dateFilter === 'weekly' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Weekly</button>
                         <button onClick={() => setDateFilter('monthly')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${dateFilter === 'monthly' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Monthly</button>

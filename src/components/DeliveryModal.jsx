@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { X, CheckCircle, Package, AlertCircle } from 'lucide-react';
 
 const DeliveryModal = ({ isOpen, onClose, order, onConfirm }) => {
-    const [mode, setMode] = useState('selection'); // 'selection' or 'partial'
+    const [mode, setMode] = useState('selection');
     const [items, setItems] = useState([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         if (order && order.items) {
@@ -18,6 +19,7 @@ const DeliveryModal = ({ isOpen, onClose, order, onConfirm }) => {
             setItems([]);
         }
         setMode('selection');
+        setIsSubmitting(false);
     }, [order, isOpen]);
 
     if (!isOpen) return null;
@@ -29,18 +31,24 @@ const DeliveryModal = ({ isOpen, onClose, order, onConfirm }) => {
         setItems(newItems);
     };
 
-    const handleFullDelivery = () => {
-        onConfirm(items.map(item => ({
+    const handleFullDelivery = async () => {
+        if (isSubmitting) return;
+        setIsSubmitting(true);
+        await onConfirm(items.map(item => ({
             ...item,
             quantity: item.originalQty // Ensure we use the original quantity
         })));
+        setIsSubmitting(false);
     };
 
-    const handlePartialConfirm = () => {
-        onConfirm(items.map(item => ({
+    const handlePartialConfirm = async () => {
+        if (isSubmitting) return;
+        setIsSubmitting(true);
+        await onConfirm(items.map(item => ({
             ...item,
             quantity: item.currentQty
         })));
+        setIsSubmitting(false);
     };
 
     const totalOriginal = items.reduce((sum, item) => sum + (item.originalQty * (item.price || item.rate || 0)), 0);

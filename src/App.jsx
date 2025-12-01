@@ -7,7 +7,10 @@ import OrdersList from './components/OrdersList';
 import Collections from './components/Collections';
 import MeterReadingScreen from './components/MeterReadingScreen';
 import PendingItemsScreen from './components/PendingItemsScreen';
+import Dashboard from './components/Dashboard';
 import Summary from './components/Summary';
+import PurchaseLogin from './components/PurchaseLogin';
+import PurchaseEntry from './components/PurchaseEntry';
 import { getDateString } from './utils';
 
 function App() {
@@ -91,45 +94,63 @@ function App() {
     }
   };
 
-  if (!loggedIn) {
-    return <LoginScreen onLogin={handleLogin} />;
-  }
-
   return (
-    <Layout userName={userName} onLogout={handleLogout} userRole={userRole}>
-      <Routes>
-        <Route path="/sales" element={
-          <SalesPortal
-            userName={userName}
-            userRole={userRole}
-            editingOrder={editingOrder}
-            setEditingOrder={setEditingOrder}
-            onNavigate={navigate}
-          />
-        } />
-        <Route path="/orders" element={
-          <OrdersList
-            userName={userName}
-            userRole={userRole}
-            setEditingOrder={setEditingOrder}
-            onNavigate={navigate}
-          />
-        } />
-        <Route path="/collections" element={
-          <Collections userName={userName} userRole={userRole} />
-        } />
-        <Route path="/meter" element={
-          <MeterReadingScreen userName={userName} userRole={userRole} />
-        } />
-        <Route path="/summary" element={
-          <Summary userName={userName} userRole={userRole} />
-        } />
-        <Route path="/pending-items" element={
-          <PendingItemsScreen userName={userName} userRole={userRole} />
-        } />
-        <Route path="*" element={<Navigate to={userRole === 'admin' ? "/orders" : "/sales"} replace />} />
-      </Routes>
-    </Layout>
+    <Routes>
+      <Route path="/" element={
+        !loggedIn ? (
+          <LoginScreen onLogin={handleLogin} />
+        ) : (
+          <Navigate to={userRole === 'admin' ? "/orders" : "/sales"} replace />
+        )
+      } />
+
+      <Route path="/purchase-login" element={<PurchaseLogin />} />
+      <Route path="/purchase-entry" element={<PurchaseEntry />} />
+
+      <Route path="/*" element={
+        loggedIn ? (
+          <Layout userName={userName} onLogout={handleLogout} userRole={userRole}>
+            <Routes>
+              <Route path="/sales" element={
+                <SalesPortal
+                  userName={userName}
+                  userRole={userRole}
+                  editingOrder={editingOrder}
+                  setEditingOrder={setEditingOrder}
+                  onNavigate={navigate}
+                />
+              } />
+              <Route path="/orders" element={
+                <OrdersList
+                  userName={userName}
+                  userRole={userRole}
+                  setEditingOrder={setEditingOrder}
+                  onNavigate={navigate}
+                />
+              } />
+              <Route path="/collections" element={
+                <Collections userName={userName} userRole={userRole} />
+              } />
+              <Route path="/meter" element={
+                <MeterReadingScreen userName={userName} userRole={userRole} />
+              } />
+              <Route path="/summary" element={
+                <Summary userName={userName} userRole={userRole} />
+              } />
+              <Route path="/pending-items" element={
+                <PendingItemsScreen userName={userName} userRole={userRole} />
+              } />
+              <Route path="/dashboard" element={
+                <Dashboard userName={userName} userRole={userRole} />
+              } />
+              <Route path="*" element={<Navigate to={userRole === 'admin' ? "/orders" : "/sales"} replace />} />
+            </Routes>
+          </Layout>
+        ) : (
+          <Navigate to="/" replace />
+        )
+      } />
+    </Routes>
   );
 }
 

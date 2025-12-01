@@ -11,6 +11,8 @@ const OrdersList = ({ userName, userRole, setEditingOrder, onNavigate }) => {
     const [statusFilter, setStatusFilter] = useState('all');
     const [dateFilter, setDateFilter] = useState('all');
     const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
+    const [salesmanFilter, setSalesmanFilter] = useState('all');
+    const [availableSalesmen, setAvailableSalesmen] = useState([]);
 
     // Delivery Modal State
     const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
@@ -58,6 +60,15 @@ const OrdersList = ({ userName, userRole, setEditingOrder, onNavigate }) => {
                 // Sort by date descending
                 ordersList.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
+                // Extract unique salesmen
+                const salesmen = [...new Set(rawOrdersList.map(o => o.salesman).filter(Boolean))];
+                setAvailableSalesmen(salesmen);
+
+                // Filter by Salesman (Admin only)
+                if (userRole === 'admin' && salesmanFilter !== 'all') {
+                    ordersList = ordersList.filter(order => order.salesman === salesmanFilter);
+                }
+
                 setOrders(ordersList);
             } else {
                 setOrders([]);
@@ -81,7 +92,7 @@ const OrdersList = ({ userName, userRole, setEditingOrder, onNavigate }) => {
             ordersRef.off('value', handleOrders);
             collectionsRef.off('value', handleCollections);
         };
-    }, [filterDate, userRole, userName, dateFilter]);
+    }, [filterDate, userRole, userName, dateFilter, salesmanFilter]);
 
     // Helper to calculate customer stats
     const getCustomerStats = (customerName) => {
@@ -103,8 +114,9 @@ const OrdersList = ({ userName, userRole, setEditingOrder, onNavigate }) => {
         };
     };
 
-    const deleteOrder = async (orderId) => {
-        if (!confirm('Delete this order?')) return;
+    const deleteOrder = async (e, orderId) => {
+        e.stopPropagation();
+        if (!window.confirm('Delete this order?')) return;
         try {
             await db.ref('orders/' + orderId).remove();
         } catch (error) {
@@ -122,14 +134,97 @@ const OrdersList = ({ userName, userRole, setEditingOrder, onNavigate }) => {
         if (!selectedOrderForDelivery) return;
 
         try {
-            const newTotal = updatedItems.reduce((sum, item) => sum + ((item.quantity || 0) * (item.price || item.rate || 0)), 0);
+            // Calculate totals
+            const deliveredItems = updatedItems.filter(item => item.quantity > 0);
+            const remainingItems = updatedItems.map(item => ({
+                ...item,
+                quantity: (item.originalQty || 0) - (item.quantity || 0)
+            })).filter(item => item.quantity > 0);
 
-            await db.ref('orders/' + selectedOrderForDelivery.id).update({
-                status: 'delivered',
-                items: updatedItems,
-                finalTotal: newTotal,
-                deliveredAt: new Date().toISOString()
-            });
+            const deliveredTotal = deliveredItems.reduce((sum, item) => sum + ((item.quantity || 0) * (item.price || item.rate || 0)), 0);
+            const remainingTotal = remainingItems.reduce((sum, item) => sum + ((item.quantity || 0) * (item.price || item.rate || 0)), 0);
+
+            // 1. Create NEW order for DELIVERED items
+            if (deliveredItems.length > 0) {
+                await db.ref('orders').push({
+                    ...selectedOrderForDelivery,
+                    status: 'delivered',
+                    items: deliveredItems,
+                    finalTotal: deliveredTotal,
+                    deliveredAt: new Date().toISOString(),
+                    originalOrderId: selectedOrderForDelivery.id, // Link to original
+                    isPartialDelivery: true
+                });
+            }
+
+            // 2. Update EXISTING order for REMAINING items
+            if (remainingItems.length > 0) {
+                await db.ref('orders/' + selectedOrderForDelivery.id).update({
+                    status: 'pending', // Stays pending
+                    items: remainingItems,
+                    finalTotal: remainingTotal,
+                    lastPartialDeliveryAt: new Date().toISOString()
+                });
+            } else {
+                // If no remaining items, delete the original pending order as it's fully delivered via the new order
+                // OR just mark it as delivered if we didn't create a new one above (but we should have if items > 0)
+                // Simpler approach: If fully delivered, just update the original order to delivered
+                // But to keep logic consistent, if we created a new order for full delivery, we should remove this one.
+                // HOWEVER, the standard flow for "Full Delivery" in the modal passes all items.
+
+                // Let's refine:
+                // If it was a "Full Delivery" (all items delivered), we can just update the status.
+                // If it was "Partial", we split.
+
+                // Check if it's a full delivery (no remaining items)
+                if (remainingItems.length === 0) {
+                    // It was a full delivery. We can just update the status of the current order.
+                    // BUT, if we already created a new order above, we have duplicated it.
+                    // Let's adjust the logic:
+
+                    // If we are here, it means we treated it as a split.
+                    // To avoid complexity, let's stick to the plan:
+                    // Partial -> Split.
+                    // Full -> Update Status.
+
+                    // We need to know if it was a partial selection or full.
+                    // We can infer from remainingItems.
+                }
+            }
+
+            // RE-EVALUATING LOGIC FOR CLEANER IMPLEMENTATION
+
+            const isFullDelivery = remainingItems.length === 0;
+
+            if (isFullDelivery) {
+                // Simple update
+                await db.ref('orders/' + selectedOrderForDelivery.id).update({
+                    status: 'delivered',
+                    items: deliveredItems,
+                    finalTotal: deliveredTotal,
+                    deliveredAt: new Date().toISOString()
+                });
+            } else {
+                // Split Logic
+                // 1. Create NEW delivered order
+                await db.ref('orders').push({
+                    ...selectedOrderForDelivery,
+                    status: 'delivered',
+                    items: deliveredItems,
+                    finalTotal: deliveredTotal,
+                    deliveredAt: new Date().toISOString(),
+                    originalOrderId: selectedOrderForDelivery.id,
+                    isPartialDelivery: true
+                });
+
+                // 2. Update OLD pending order
+                await db.ref('orders/' + selectedOrderForDelivery.id).update({
+                    status: 'pending',
+                    items: remainingItems,
+                    finalTotal: remainingTotal,
+                    lastPartialDeliveryAt: new Date().toISOString()
+                });
+            }
 
             setIsDeliveryModalOpen(false);
             setSelectedOrderForDelivery(null);
@@ -174,6 +269,11 @@ const OrdersList = ({ userName, userRole, setEditingOrder, onNavigate }) => {
         filteredOrders = orders.filter(o => o.status === 'delivered');
     }
 
+    // Calculate Summary Stats
+    const totalPendingValue = orders.filter(o => (o.status || 'pending') === 'pending').reduce((sum, o) => sum + (o.finalTotal || o.total || 0), 0);
+    const totalDeliveredValue = orders.filter(o => o.status === 'delivered').reduce((sum, o) => sum + (o.finalTotal || o.total || 0), 0);
+    const totalCollections = collections.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0);
+
     return (
         <div className="max-w-4xl mx-auto">
             <DeliveryModal
@@ -182,6 +282,26 @@ const OrdersList = ({ userName, userRole, setEditingOrder, onNavigate }) => {
                 order={selectedOrderForDelivery}
                 onConfirm={handleDeliveryConfirm}
             />
+
+            {userRole === 'admin' && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="bg-orange-50 p-4 rounded-2xl border border-orange-100">
+                        <p className="text-orange-600 font-bold text-sm uppercase">Pending Orders</p>
+                        <p className="text-2xl font-bold text-orange-800">₹{totalPendingValue.toFixed(0)}</p>
+                        <p className="text-xs text-orange-500">{pendingCount} orders</p>
+                    </div>
+                    <div className="bg-green-50 p-4 rounded-2xl border border-green-100">
+                        <p className="text-green-600 font-bold text-sm uppercase">Delivered Orders</p>
+                        <p className="text-2xl font-bold text-green-800">₹{totalDeliveredValue.toFixed(0)}</p>
+                        <p className="text-xs text-green-500">{deliveredCount} orders</p>
+                    </div>
+                    <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
+                        <p className="text-blue-600 font-bold text-sm uppercase">Total Collections</p>
+                        <p className="text-2xl font-bold text-blue-800">₹{totalCollections.toFixed(0)}</p>
+                        <p className="text-xs text-blue-500">All time</p>
+                    </div>
+                </div>
+            )}
 
             <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 mb-6">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
@@ -216,6 +336,22 @@ const OrdersList = ({ userName, userRole, setEditingOrder, onNavigate }) => {
                         </button>
                     </div>
                 </div>
+
+                {userRole === 'admin' && (
+                    <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Filter by Salesman</label>
+                        <select
+                            value={salesmanFilter}
+                            onChange={(e) => setSalesmanFilter(e.target.value)}
+                            className="w-full md:w-auto px-4 py-2 rounded-xl border border-gray-200 focus:border-blue-500 outline-none bg-white"
+                        >
+                            <option value="all">All Salesmen</option>
+                            {availableSalesmen.map(name => (
+                                <option key={name} value={name}>{name}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
 
                 <div className="flex flex-col md:flex-row gap-4">
                     <input
@@ -352,7 +488,7 @@ const OrdersList = ({ userName, userRole, setEditingOrder, onNavigate }) => {
 
                                     {userRole === 'admin' && (
                                         <button
-                                            onClick={() => deleteOrder(order.id)}
+                                            onClick={(e) => deleteOrder(e, order.id)}
                                             className="flex items-center gap-1 px-3 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"
                                         >
                                             <Trash2 className="w-4 h-4" /> Delete

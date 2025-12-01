@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { User, Lock, Briefcase, Crown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const LoginScreen = ({ onLogin }) => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [selectedRole, setSelectedRole] = useState('sales');
+    const navigate = useNavigate();
 
     const handleLogin = (e) => {
         e.preventDefault();
@@ -42,8 +44,8 @@ const LoginScreen = ({ onLogin }) => {
                             <button
                                 onClick={() => setSelectedRole('sales')}
                                 className={`p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center justify-center gap-2 ${selectedRole === 'sales'
-                                        ? 'border-blue-600 bg-blue-50 text-blue-600 shadow-md'
-                                        : 'border-gray-100 hover:border-blue-200 hover:bg-gray-50 text-gray-600'
+                                    ? 'border-blue-600 bg-blue-50 text-blue-600 shadow-md'
+                                    : 'border-gray-100 hover:border-blue-200 hover:bg-gray-50 text-gray-600'
                                     }`}
                             >
                                 <User className="w-8 h-8" />
@@ -52,8 +54,8 @@ const LoginScreen = ({ onLogin }) => {
                             <button
                                 onClick={() => setSelectedRole('admin')}
                                 className={`p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center justify-center gap-2 ${selectedRole === 'admin'
-                                        ? 'border-blue-600 bg-blue-50 text-blue-600 shadow-md'
-                                        : 'border-gray-100 hover:border-blue-200 hover:bg-gray-50 text-gray-600'
+                                    ? 'border-blue-600 bg-blue-50 text-blue-600 shadow-md'
+                                    : 'border-gray-100 hover:border-blue-200 hover:bg-gray-50 text-gray-600'
                                     }`}
                             >
                                 <Crown className="w-8 h-8" />
@@ -115,6 +117,15 @@ const LoginScreen = ({ onLogin }) => {
                             Start Working
                         </button>
                     </form>
+
+                    <div className="mt-6 text-center">
+                        <button
+                            onClick={() => navigate('/purchase-login')}
+                            className="text-sm text-gray-500 hover:text-blue-600 transition-colors cursor-pointer"
+                        >
+                            For Purchase only
+                        </button>
+                    </div>
                 </div>
             </div>
             <p className="mt-8 text-sm text-gray-400">© 2025 Sales Management System</p>

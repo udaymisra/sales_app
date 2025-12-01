@@ -74,12 +74,12 @@ const Summary = ({ userName, userRole }) => {
 
     return (
         <div className="max-w-5xl mx-auto">
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                     <BarChart3 className="w-8 h-8 text-blue-600" />
                     Performance Summary
                 </h2>
-                <div className="w-64">
+                <div className="w-full md:w-64">
                     <select
                         value={selectedSalesman}
                         onChange={e => setSelectedSalesman(e.target.value)}
@@ -129,7 +129,8 @@ const Summary = ({ userName, userRole }) => {
                     Salesman Breakdown
                 </h3>
 
-                <div className="overflow-hidden rounded-2xl border border-gray-100">
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-hidden rounded-2xl border border-gray-100">
                     <table className="w-full">
                         <thead>
                             <tr className="bg-gray-50 text-left">
@@ -159,6 +160,30 @@ const Summary = ({ userName, userRole }) => {
                             ))}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-4">
+                    {summaryData.map((item, index) => (
+                        <div key={index} className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-gray-600 font-bold shadow-sm border border-gray-100">
+                                    {item.salesman.charAt(0)}
+                                </div>
+                                <span className="font-medium text-gray-900 break-all text-sm">{item.salesman}</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                                    <p className="text-[10px] text-gray-500 uppercase font-bold mb-1 tracking-wider">Orders</p>
+                                    <p className="font-bold text-blue-600 text-lg">₹{item.orders.toFixed(0)}</p>
+                                </div>
+                                <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                                    <p className="text-[10px] text-gray-500 uppercase font-bold mb-1 tracking-wider">Collections</p>
+                                    <p className="font-bold text-green-600 text-lg">₹{item.collections.toFixed(0)}</p>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>

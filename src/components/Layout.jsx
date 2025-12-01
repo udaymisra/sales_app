@@ -9,11 +9,12 @@ const Layout = ({ children, userName, onLogout, userRole }) => {
     const isActive = (path) => location.pathname === path;
 
     const navItems = [
+        { path: '/dashboard', label: 'Dashboard', icon: BarChart3, show: userRole === 'admin' },
         { path: '/sales', label: 'New Order', icon: ShoppingCart, show: userRole !== 'admin' },
         { path: '/orders', label: 'Orders', icon: ClipboardList, show: true },
         { path: '/collections', label: 'Collections', icon: Wallet, show: true },
         { path: '/meter', label: 'Meter', icon: Gauge, show: true },
-        { path: '/summary', label: 'Summary', icon: BarChart3, show: userRole === 'admin' },
+        { path: '/summary', label: 'Summary', icon: List, show: userRole === 'admin' },
         { path: '/pending-items', label: 'Item Details', icon: List, show: userRole === 'admin' },
     ];
 
@@ -47,8 +48,8 @@ const Layout = ({ children, userName, onLogout, userRole }) => {
                                 key={item.path}
                                 onClick={() => navigate(item.path)}
                                 className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all text-sm font-medium ${isActive(item.path)
-                                        ? 'bg-white text-blue-600 shadow-sm'
-                                        : 'text-blue-100 hover:bg-white/10 hover:text-white'
+                                    ? 'bg-white text-blue-600 shadow-sm'
+                                    : 'text-blue-100 hover:bg-white/10 hover:text-white'
                                     }`}
                             >
                                 <item.icon className="w-4 h-4" />
@@ -71,8 +72,8 @@ const Layout = ({ children, userName, onLogout, userRole }) => {
                             key={item.path}
                             onClick={() => navigate(item.path)}
                             className={`flex flex-col items-center p-2 rounded-lg transition-colors ${isActive(item.path)
-                                    ? 'text-blue-600'
-                                    : 'text-gray-400 hover:text-gray-600'
+                                ? 'text-blue-600'
+                                : 'text-gray-400 hover:text-gray-600'
                                 }`}
                         >
                             <item.icon className={`w-6 h-6 ${isActive(item.path) ? 'fill-current' : ''}`} />

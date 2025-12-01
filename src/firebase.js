@@ -1,6 +1,8 @@
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/database';
 
+import { getFirestore } from 'firebase/firestore';
+
 const firebaseConfig = {
     apiKey: "AIzaSyDTzOREj0Kw4JEAZcqkVvEmADRyRaOyEOI",
     authDomain: "sales-management-app-d7599.firebaseapp.com",
@@ -11,9 +13,13 @@ const firebaseConfig = {
     appId: "1:188895291499:web:411ba9abae00d62b33292e"
 };
 
+let app;
 if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
+    app = firebase.initializeApp(firebaseConfig);
+} else {
+    app = firebase.app();
 }
 
 export const db = firebase.database();
+export const firestore = getFirestore(app);
 export default firebase;
