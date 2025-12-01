@@ -23,6 +23,7 @@ const PurchaseEntry = () => {
     const [purchases, setPurchases] = useState([]);
     const [editingId, setEditingId] = useState(null);
     const [cart, setCart] = useState([]);
+    const [saveStatus, setSaveStatus] = useState('idle'); // idle, saving, saved
     const [formData, setFormData] = useState({
         itemName: ITEMS[0],
         quantity: '',
@@ -72,6 +73,7 @@ const PurchaseEntry = () => {
     const handleSaveAll = async () => {
         if (cart.length === 0) return;
 
+        setSaveStatus('saving');
         setLoading(true);
         try {
             const batchPromises = cart.map(item => {
@@ -87,13 +89,24 @@ const PurchaseEntry = () => {
             });
 
             await Promise.all(batchPromises);
-            alert('All items saved successfully!');
-            setCart([]);
+
+            // Show "Saved" state
+            setSaveStatus('saved');
+
+            // Wait 1.5 seconds before clearing
+            setTimeout(() => {
+                setCart([]);
+                setSaveStatus('idle');
+                setLoading(false);
+                alert('All items saved successfully!');
+            }, 1500);
+
         } catch (error) {
             console.error('Error saving batch:', error);
             alert('Error saving batch purchases');
+            setLoading(false);
+            setSaveStatus('idle');
         }
-        setLoading(false);
     };
 
     // Keep direct update for editing existing items
@@ -298,9 +311,19 @@ const PurchaseEntry = () => {
                                 <button
                                     onClick={handleSaveAll}
                                     disabled={loading}
-                                    className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors shadow-lg shadow-green-200 flex items-center justify-center"
+                                    className={`w-full text-white font-semibold py-3 px-6 rounded-xl transition-colors shadow-lg flex items-center justify-center ${saveStatus === 'saved'
+                                            ? 'bg-green-600 hover:bg-green-700 shadow-green-200'
+                                            : 'bg-green-600 hover:bg-green-700 shadow-green-200'
+                                        }`}
                                 >
-                                    {loading ? 'Saving All...' : (
+                                    {saveStatus === 'saving' ? (
+                                        'Saving...'
+                                    ) : saveStatus === 'saved' ? (
+                                        <>
+                                            <CheckCircle size={20} className="mr-2" />
+                                            Saved
+                                        </>
+                                    ) : (
                                         <>
                                             <CheckCircle size={20} className="mr-2" />
                                             Save All Items

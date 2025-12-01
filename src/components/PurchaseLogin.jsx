@@ -9,7 +9,7 @@ const PurchaseLogin = () => {
 
     const handleLogin = (e) => {
         e.preventDefault();
-        if (password === 'Swarnpurchase1841') {
+        if (password === 'Swarn1841') {
             navigate('/purchase-entry');
         } else {
             setError('Invalid password');
