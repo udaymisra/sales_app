@@ -11,6 +11,7 @@ const OrdersList = ({ userName, userRole, setEditingOrder, onNavigate }) => {
     const [statusFilter, setStatusFilter] = useState('all');
     const [dateFilter, setDateFilter] = useState('all');
     const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
+    const [filterMonth, setFilterMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
     const [salesmanFilter, setSalesmanFilter] = useState('all');
     const [availableSalesmen, setAvailableSalesmen] = useState([]);
 
@@ -50,10 +51,14 @@ const OrdersList = ({ userName, userRole, setEditingOrder, onNavigate }) => {
                         const orderDate = new Date(order.timestamp);
                         return orderDate >= monthAgo && orderDate <= filterDateObj;
                     });
-                }
-
-                if (userRole !== 'admin') {
-                    ordersList = ordersList.filter(order => order.salesman === userName);
+                } else if (dateFilter === 'specificMonth') {
+                    ordersList = ordersList.filter(order => {
+                        const orderDate = new Date(order.timestamp);
+                        const year = orderDate.getFullYear();
+                        const month = String(orderDate.getMonth() + 1).padStart(2, '0');
+                        const orderMonth = `${year}-${month}`;
+                        return orderMonth === filterMonth;
+                    });
                 }
 
                 ordersList.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
@@ -88,7 +93,7 @@ const OrdersList = ({ userName, userRole, setEditingOrder, onNavigate }) => {
             ordersRef.off('value', handleOrders);
             collectionsRef.off('value', handleCollections);
         };
-    }, [filterDate, userRole, userName, dateFilter, salesmanFilter]);
+    }, [filterDate, userRole, userName, dateFilter, salesmanFilter, filterMonth]);
 
     const getCustomerStats = (customerName) => {
         if (!customerName) return { collected: 0, balance: 0 };
@@ -247,8 +252,8 @@ const OrdersList = ({ userName, userRole, setEditingOrder, onNavigate }) => {
                         <Filter className="w-5 h-5 text-blue-600" />
                         Filters
                     </h2>
-                    
-                    {/* Date Filter Buttons - Better mobile layout */}
+
+                    {/* Date Filter Buttons */}
                     <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
                         <button
                             onClick={() => setDateFilter('all')}
@@ -263,16 +268,16 @@ const OrdersList = ({ userName, userRole, setEditingOrder, onNavigate }) => {
                             Specific Date
                         </button>
                         <button
-                            onClick={() => setDateFilter('weekly')}
-                            className={`px-3 py-2 rounded-lg text-xs md:text-sm font-medium transition-all ${dateFilter === 'weekly' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                        >
-                            Last 7 Days
-                        </button>
-                        <button
                             onClick={() => setDateFilter('monthly')}
                             className={`px-3 py-2 rounded-lg text-xs md:text-sm font-medium transition-all ${dateFilter === 'monthly' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                         >
                             Last 30 Days
+                        </button>
+                        <button
+                            onClick={() => setDateFilter('specificMonth')}
+                            className={`px-3 py-2 rounded-lg text-xs md:text-sm font-medium transition-all ${dateFilter === 'specificMonth' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                        >
+                            Specific Month
                         </button>
                     </div>
                 </div>
@@ -294,14 +299,23 @@ const OrdersList = ({ userName, userRole, setEditingOrder, onNavigate }) => {
                 )}
 
                 <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
-                    <input
-                        type="date"
-                        value={filterDate}
-                        onChange={e => setFilterDate(e.target.value)}
-                        className="flex-1 px-3 md:px-4 py-2 md:py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-sm md:text-base"
-                    />
-                    
-                    {/* Status Filter - Better mobile */}
+                    {dateFilter === 'specificMonth' ? (
+                        <input
+                            type="month"
+                            value={filterMonth}
+                            onChange={e => setFilterMonth(e.target.value)}
+                            className="flex-1 px-3 md:px-4 py-2 md:py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-sm md:text-base"
+                        />
+                    ) : (
+                        <input
+                            type="date"
+                            value={filterDate}
+                            onChange={e => setFilterDate(e.target.value)}
+                            disabled={dateFilter !== 'asOnDate' && dateFilter !== 'weekly' && dateFilter !== 'monthly'}
+                            className={`flex-1 px-3 md:px-4 py-2 md:py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-sm md:text-base ${dateFilter === 'all' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        />
+                    )}
+
                     <div className="flex bg-gray-100 p-1 rounded-xl gap-1">
                         <button
                             onClick={() => setStatusFilter('all')}
@@ -351,7 +365,11 @@ const OrdersList = ({ userName, userRole, setEditingOrder, onNavigate }) => {
                                         </div>
                                         <p className="text-xs md:text-sm text-gray-500 flex items-center gap-2 mb-1">
                                             <Calendar className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
-                                            <span className="truncate">{orderDate} • By {order.salesman}</span>
+                                            <span className="truncate">
+                                                {orderStatus === 'delivered' && order.deliveredAt
+                                                    ? `Delivered: ${getDateString(order.deliveredAt)}`
+                                                    : `Ordered: ${getDateString(order.timestamp)}`} • By {order.salesman}
+                                            </span>
                                         </p>
                                         <p className="text-xs md:text-sm text-gray-500">Mobile: {order.mobile}</p>
                                         {order.location && (
@@ -387,7 +405,7 @@ const OrdersList = ({ userName, userRole, setEditingOrder, onNavigate }) => {
                                                     </p>
                                                 ) : (
                                                     <p className="text-lg md:text-xl font-bold text-red-500 flex items-center gap-1">
-                                                        <AlertCircle className="w-3 h-3 md:w-4 md:h-4" /> 
+                                                        <AlertCircle className="w-3 h-3 md:w-4 md:h-4" />
                                                         <span className="truncate">₹{balance.toFixed(2)}</span>
                                                     </p>
                                                 )}

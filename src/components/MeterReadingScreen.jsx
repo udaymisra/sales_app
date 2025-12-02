@@ -176,14 +176,20 @@ const MeterReadingScreen = ({ userName, userRole }) => {
             <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="font-bold text-lg text-gray-800">History</h3>
-                    <select
-                        value={monthFilter}
-                        onChange={e => setMonthFilter(e.target.value)}
-                        className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium focus:outline-none focus:border-blue-500"
-                    >
-                        <option value="all">All Time</option>
-                        <option value={currentMonthKey}>Current Month</option>
-                    </select>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setMonthFilter('all')}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${monthFilter === 'all' ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                        >
+                            All Time
+                        </button>
+                        <input
+                            type="month"
+                            value={monthFilter === 'all' ? '' : monthFilter}
+                            onChange={e => setMonthFilter(e.target.value)}
+                            className="px-3 py-2 rounded-lg border border-gray-200 text-sm font-medium focus:outline-none focus:border-blue-500"
+                        />
+                    </div>
                 </div>
 
                 <div className="overflow-x-auto">

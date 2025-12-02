@@ -14,7 +14,9 @@ const ITEMS = [
     'Plastic 100 grm',
     'Plastic 50 gm',
     'Plastic 7 gm',
-    'Plastic 13 gm'
+    'Plastic 13 gm',
+	'Silvercap',
+	'Misc'
 ];
 
 const PurchaseEntry = () => {

@@ -7,6 +7,7 @@ const PendingItemsScreen = ({ userName, userRole }) => {
     const [salesmanFilter, setSalesmanFilter] = useState('');
     const [allItems, setAllItems] = useState([]);
     const [salesmen, setSalesmen] = useState([]);
+    const [monthFilter, setMonthFilter] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
 
     useEffect(() => {
         if (userRole !== 'admin') return;
@@ -20,6 +21,14 @@ const PendingItemsScreen = ({ userName, userRole }) => {
             const allSalesmenSet = new Set();
 
             orders.forEach(order => {
+                // Month Filter Logic (Local Time)
+                const orderDate = new Date(order.timestamp);
+                const year = orderDate.getFullYear();
+                const month = String(orderDate.getMonth() + 1).padStart(2, '0');
+                const orderMonth = `${year}-${month}`;
+
+                if (orderMonth !== monthFilter) return;
+
                 if (order.items && Array.isArray(order.items)) {
                     order.items.forEach(item => {
                         const salesman = order.salesman;
@@ -72,7 +81,7 @@ const PendingItemsScreen = ({ userName, userRole }) => {
         });
 
         return () => ordersRef.off('value', listener);
-    }, [userRole]);
+    }, [userRole, monthFilter]);
 
     const { filteredItemsBySalesman, overallSummary } = useMemo(() => {
         const overallSummaryMap = new Map();
@@ -135,6 +144,14 @@ const PendingItemsScreen = ({ userName, userRole }) => {
                 <div className="flex items-center gap-2 mb-6">
                     <Filter className="w-6 h-6 text-blue-600" />
                     <h2 className="text-xl font-bold text-gray-800">Filters</h2>
+                    <div className="ml-auto">
+                        <input
+                            type="month"
+                            value={monthFilter}
+                            onChange={e => setMonthFilter(e.target.value)}
+                            className="px-4 py-2 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all bg-white"
+                        />
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

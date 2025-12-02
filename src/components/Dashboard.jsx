@@ -6,6 +6,7 @@ const Dashboard = ({ userName, userRole }) => {
     const [orders, setOrders] = useState([]);
     const [collections, setCollections] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [monthFilter, setMonthFilter] = useState(new Date().toISOString().slice(0, 7));
 
     useEffect(() => {
         const ordersRef = db.ref('orders');
@@ -37,13 +38,33 @@ const Dashboard = ({ userName, userRole }) => {
 
     // --- Calculations ---
 
+    const filteredOrders = orders.filter(o => {
+        if (monthFilter === 'all') return true;
+        if (!o.timestamp) return false;
+        const d = new Date(o.timestamp);
+        if (isNaN(d.getTime())) return false;
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        return `${year}-${month}` === monthFilter;
+    });
+
+    const filteredCollections = collections.filter(c => {
+        if (monthFilter === 'all') return true;
+        if (!c.date) return false;
+        const d = new Date(c.date);
+        if (isNaN(d.getTime())) return false;
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        return `${year}-${month}` === monthFilter;
+    });
+
     // 1. Total Sales & Collections
-    const totalSales = orders.reduce((sum, o) => sum + (o.finalTotal || o.total || 0), 0);
-    const totalCollected = collections.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0);
+    const totalSales = filteredOrders.reduce((sum, o) => sum + (o.finalTotal || o.total || 0), 0);
+    const totalCollected = filteredCollections.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0);
     const totalPending = totalSales - totalCollected; // Rough estimate, better to sum unpaid orders
 
     // 2. Sales by Salesman
-    const salesBySalesman = orders.reduce((acc, order) => {
+    const salesBySalesman = filteredOrders.reduce((acc, order) => {
         const salesman = order.salesman || 'Unknown';
         acc[salesman] = (acc[salesman] || 0) + (order.finalTotal || order.total || 0);
         return acc;
@@ -53,16 +74,16 @@ const Dashboard = ({ userName, userRole }) => {
     const maxSales = Math.max(...Object.values(salesBySalesman), 1); // Avoid div by zero
 
     // 3. Order Status Distribution
-    const statusCounts = orders.reduce((acc, order) => {
+    const statusCounts = filteredOrders.reduce((acc, order) => {
         const status = order.status || 'pending';
         acc[status] = (acc[status] || 0) + 1;
         return acc;
     }, {});
-    const totalOrders = orders.length;
+    const totalOrders = filteredOrders.length;
 
     // 4. Recent Activity (Last 5 orders)
     // Filter out duplicates (same customer, same amount, same timestamp)
-    const uniqueOrders = orders.filter((order, index, self) =>
+    const uniqueOrders = filteredOrders.filter((order, index, self) =>
         index === self.findIndex((t) => (
             t.customerName === order.customerName &&
             (t.finalTotal || t.total) === (order.finalTotal || order.total) &&
@@ -74,10 +95,26 @@ const Dashboard = ({ userName, userRole }) => {
 
     return (
         <div className="max-w-6xl mx-auto pb-10">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                <Activity className="w-6 h-6 text-blue-600" />
-                Dashboard
-            </h2>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                    <Activity className="w-6 h-6 text-blue-600" />
+                    Dashboard
+                </h2>
+                <div className="flex gap-2 bg-white p-1 rounded-xl border border-gray-200 shadow-sm">
+                    <button
+                        onClick={() => setMonthFilter('all')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${monthFilter === 'all' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'}`}
+                    >
+                        All Time
+                    </button>
+                    <input
+                        type="month"
+                        value={monthFilter === 'all' ? '' : monthFilter}
+                        onChange={(e) => setMonthFilter(e.target.value)}
+                        className="px-4 py-2 rounded-lg border-l border-gray-200 outline-none text-sm bg-transparent"
+                    />
+                </div>
+            </div>
 
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

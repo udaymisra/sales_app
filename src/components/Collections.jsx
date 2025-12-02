@@ -6,6 +6,7 @@ const Collections = ({ userName, userRole }) => {
     const [collections, setCollections] = useState([]);
     const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
     const [dateFilter, setDateFilter] = useState('all');
+    const [filterMonth, setFilterMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
     const [customerName, setCustomerName] = useState('');
     const [collectionAmount, setCollectionAmount] = useState('');
     const [totalCollectionAmount, setTotalCollectionAmount] = useState(0);
@@ -31,6 +32,11 @@ const Collections = ({ userName, userRole }) => {
                         const monthAgo = new Date(filterDateObj);
                         monthAgo.setDate(monthAgo.getDate() - 30);
                         return collectionDate >= monthAgo && collectionDate <= filterDateObj;
+                    } else if (dateFilter === 'specificMonth') {
+                        const year = collectionDate.getFullYear();
+                        const month = String(collectionDate.getMonth() + 1).padStart(2, '0');
+                        const collectionMonth = `${year}-${month}`;
+                        return collectionMonth === filterMonth;
                     }
                     return true; // 'all' case
                 });
@@ -48,7 +54,7 @@ const Collections = ({ userName, userRole }) => {
             }
         });
         return () => collectionsRef.off('value', listener);
-    }, [filterDate, userRole, userName, dateFilter]);
+    }, [filterDate, userRole, userName, dateFilter, filterMonth]);
 
     const addCollection = async () => {
         if (!customerName || !collectionAmount) {
@@ -96,15 +102,26 @@ const Collections = ({ userName, userRole }) => {
                         <button onClick={() => setDateFilter('asOnDate')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${dateFilter === 'asOnDate' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>As On Date</button>
                         <button onClick={() => setDateFilter('weekly')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${dateFilter === 'weekly' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Weekly</button>
                         <button onClick={() => setDateFilter('monthly')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${dateFilter === 'monthly' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Monthly</button>
+                        <button onClick={() => setDateFilter('specificMonth')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${dateFilter === 'specificMonth' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Specific Month</button>
                     </div>
                 </div>
 
-                <input
-                    type="date"
-                    value={filterDate}
-                    onChange={e => setFilterDate(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all mb-6"
-                />
+                {dateFilter === 'specificMonth' ? (
+                    <input
+                        type="month"
+                        value={filterMonth}
+                        onChange={e => setFilterMonth(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all mb-6"
+                    />
+                ) : (
+                    <input
+                        type="date"
+                        value={filterDate}
+                        onChange={e => setFilterDate(e.target.value)}
+                        className={`w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all mb-6 ${dateFilter === 'all' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={dateFilter !== 'asOnDate' && dateFilter !== 'weekly' && dateFilter !== 'monthly'}
+                    />
+                )}
 
                 {userRole !== 'admin' && (
                     <div className="bg-gray-50 rounded-2xl p-6 mb-6 border border-gray-100">
