@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { BarChart3, TrendingUp, Wallet, Users, ArrowLeft, Calendar, FileText } from 'lucide-react';
-import { getDateString } from '../utils';
+import { getDateString, formatDateTime } from '../utils';
 
 const Summary = ({ userName, userRole }) => {
     const [salesmen, setSalesmen] = useState([]);
@@ -292,7 +292,7 @@ const Summary = ({ userName, userRole }) => {
                                 {detailData.map((row, idx) => (
                                     <tr key={idx} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                                            {getDateString(row.date)}
+                                            {formatDateTime(row.date)}
                                         </td>
                                         <td className="px-4 py-3 text-sm font-medium text-gray-900">
                                             {row.customer}

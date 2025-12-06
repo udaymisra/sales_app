@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../firebase';
-import { getDateString } from '../utils';
+import { getDateString, formatDateTime } from '../utils';
 import { MapPin, Edit2, Trash2, CheckCircle, Clock, Calendar, Filter, Wallet, AlertCircle } from 'lucide-react';
 import DeliveryModal from './DeliveryModal';
 
@@ -68,6 +68,9 @@ const OrdersList = ({ userName, userRole, setEditingOrder, onNavigate }) => {
 
                 if (userRole === 'admin' && salesmanFilter !== 'all') {
                     ordersList = ordersList.filter(order => order.salesman === salesmanFilter);
+                } else if (userRole !== 'admin') {
+                    // STRICT FILTER: Salesmen can only see their own orders
+                    ordersList = ordersList.filter(order => order.salesman === userName);
                 }
 
                 setOrders(ordersList);
@@ -367,8 +370,8 @@ const OrdersList = ({ userName, userRole, setEditingOrder, onNavigate }) => {
                                             <Calendar className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
                                             <span className="truncate">
                                                 {orderStatus === 'delivered' && order.deliveredAt
-                                                    ? `Delivered: ${getDateString(order.deliveredAt)}`
-                                                    : `Ordered: ${getDateString(order.timestamp)}`} • By {order.salesman}
+                                                    ? `Delivered: ${formatDateTime(order.deliveredAt)}`
+                                                    : `Ordered: ${formatDateTime(order.timestamp)}`} • By {order.salesman}
                                             </span>
                                         </p>
                                         <p className="text-xs md:text-sm text-gray-500">Mobile: {order.mobile}</p>

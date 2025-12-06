@@ -58,6 +58,8 @@ const SalesPortal = ({ userName, userRole, editingOrder, setEditingOrder, onNavi
 
     const addItem = () => {
         if (!selectedItem || !qty) return alert('Select item & quantity');
+        if (selectedItem.trim() === '') return alert('Invalid item selected');
+
         const qtyNum = parseFloat(qty) || 0;
         const rateNum = parseFloat(rate) || 0;
         const discountPercent = parseFloat(discount) || 0;
@@ -88,6 +90,11 @@ const SalesPortal = ({ userName, userRole, editingOrder, setEditingOrder, onNavi
 
     const saveOrder = async () => {
         if (!customerName || !mobile || orderItems.length === 0) return alert('Fill all details');
+
+        // Validate items
+        const invalidItems = orderItems.filter(item => !item.name || item.name.trim() === '');
+        if (invalidItems.length > 0) return alert('Order contains invalid items. Please remove them.');
+
         try {
             const orderData = {
                 customerName,
@@ -278,7 +285,7 @@ const SalesPortal = ({ userName, userRole, editingOrder, setEditingOrder, onNavi
                                     <div className="flex-1 min-w-0">
                                         <p className="font-bold text-gray-800 text-sm md:text-base truncate">{it.name}</p>
                                         <p className="text-xs md:text-sm text-gray-500">
-                                            {it.qty} × ₹{it.rate} 
+                                            {it.qty} × ₹{it.rate}
                                             {it.discount > 0 && <span className="text-orange-600 ml-1">(-{it.discount}%)</span>}
                                         </p>
                                     </div>

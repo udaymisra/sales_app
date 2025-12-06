@@ -10,3 +10,11 @@ export const formatTime = (ts) => {
     if (!ts) return '-';
     return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
+
+export const formatDateTime = (ts) => {
+    if (!ts) return '-';
+    const d = new Date(ts);
+    const dateStr = getDateString(ts);
+    const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return `${dateStr} ${timeStr}`;
+};
